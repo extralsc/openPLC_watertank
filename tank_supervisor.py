@@ -60,13 +60,6 @@ logger.setLevel(logging.INFO)
 # Utility funcs
 # -----------------------------
 
-def pulse_coil(client, addr):
-    print(f"DEBUG: Sending pulse to coil {addr}")
-    result1 = client.write_coil(addr, True)
-    print(f"DEBUG: Set coil {addr} = 1, success: {not result1.isError()}")
-    time.sleep(PULSE_SEC)
-    result2 = client.write_coil(addr, False)
-    print(f"DEBUG: Set coil {addr} = 0, success: {not result2.isError()}")
 
 def read_level(client):
     rr = client.read_holding_registers(REG_LEVEL, 1)
@@ -152,11 +145,25 @@ def main():
 
     sim = DaySim(initial_level=20.0)
 
-    # Sync with actual PLC state at startup
-    pump_actual = read_coil(client, COIL_PUMP_STATUS)
-    pump_on_cmd_state = bool(pump_actual) if pump_actual is not None else False
+    # Read and display ALL server values at startup
+    print("\n=== PLC STATUS AT STARTUP ===")
+    pump_status = read_coil(client, COIL_PUMP_STATUS)
+    pb1_status = read_coil(client, COIL_START)
+    pb2_status = read_coil(client, COIL_STOP)
+    tank_full_status = read_coil(client, COIL_FULL)
+    tank_level_value = read_level(client)
 
-    if pump_actual:
+    print(f"Pump Status (coil 1):     {pump_status}")
+    print(f"PB1/Start (coil 801):     {pb1_status}")
+    print(f"PB2/Stop (coil 802):      {pb2_status}")
+    print(f"Tank Full (coil 803):     {tank_full_status}")
+    print(f"Tank Level (reg 40001):   {tank_level_value}")
+    print("================================\n")
+
+    # Sync with actual PLC state at startup
+    pump_on_cmd_state = bool(pump_status) if pump_status is not None else False
+
+    if pump_status:
         logger.info(f"SYNC: Found pump already running on startup")
         sim.pump_expected_running = True
     else:
@@ -177,7 +184,9 @@ def main():
 
             # Emergency override first
             if tank_full:
-                pulse_coil(client, COIL_STOP)
+                client.write_coil(COIL_STOP, True)
+                time.sleep(0.5)
+                client.write_coil(COIL_STOP, False)
                 sim.pump_expected_running = False
                 pump_on_cmd_state = False
                 logger.warning("SAFETY_HIGH_HIGH Tank_Full=1 -> Pump STOP immediately")
@@ -190,21 +199,25 @@ def main():
                         print(f"DEBUG: About to send coil {COIL_START} = True")
                         result = client.write_coil(COIL_START, True)
                         print(f"DEBUG: write_coil result: {result}, isError: {result.isError() if hasattr(result, 'isError') else 'unknown'}")
+
+                        # Give PLC time to process, then check
+                        time.sleep(0.5)
+                        pump_check = read_coil(client, COIL_PUMP_STATUS)
+                        print(f"DEBUG: Pump status after 0.5s delay: {pump_check}")
+
+                        # Clear the start button
+                        client.write_coil(COIL_START, False)
+                        print(f"DEBUG: Cleared coil {COIL_START} back to False")
+
                         pump_on_cmd_state = True
                         sim.pump_expected_running = True
                         logger.info(f"PUMP_START at {tank_level:.1f}% (sim {sim_time.time()} simLvl {sim_level:.1f}%)")
 
-                        # Immediately check if pump actually started
-                        pump_check = read_coil(client, COIL_PUMP_STATUS)
-                        tank_full_check = read_coil(client, COIL_FULL)
-                        pb1_check = read_coil(client, COIL_START)
-                        print(f"DEBUG: Pump status after start command: {pump_check}")
-                        print(f"DEBUG: TANK_FULL status: {tank_full_check}")
-                        print(f"DEBUG: PB1 (coil 801) status: {pb1_check}")
-
                     # Stop condition near 95%
                     if (tank_level >= STOP_TARGET) and (pump_on_cmd_state is True):
                         client.write_coil(COIL_STOP, True)
+                        time.sleep(0.5)
+                        client.write_coil(COIL_STOP, False)  # Clear stop button
                         pump_on_cmd_state = False
                         sim.pump_expected_running = False
                         logger.info(f"PUMP_STOP at {tank_level:.1f}% (sim {sim_time.time()} simLvl {sim_level:.1f}%)")
