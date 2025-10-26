@@ -74,11 +74,8 @@ def write_level(client, level_pct):
 def read_coil(client, addr):
     rr = client.read_coils(addr, 1)
     if rr.isError():
-        print(f"DEBUG: Error reading coil {addr}: {rr}")
         return None
-    result = bool(rr.bits[0])
-    print(f"DEBUG: Read coil {addr} = {result} (raw bits: {rr.bits})")
-    return result
+    return bool(rr.bits[0])
 
 # -----------------------------
 # Day simulator for drain profile
@@ -148,22 +145,8 @@ def main():
 
     sim = DaySim(initial_level=20.0)
 
-    # Read and display ALL server values at startup
-    print("\n=== PLC STATUS AT STARTUP ===")
-    pump_status = read_coil(client, COIL_PUMP_STATUS)
-    pb1_status = read_coil(client, COIL_START)
-    pb2_status = read_coil(client, COIL_STOP)
-    tank_full_status = read_coil(client, COIL_FULL)
-    tank_level_value = read_level(client)
-
-    print(f"Pump Status (coil 1):     {pump_status}")
-    print(f"PB1/Start (coil 801):     {pb1_status}")
-    print(f"PB2/Stop (coil 802):      {pb2_status}")
-    print(f"Tank Full (coil 803):     {tank_full_status}")
-    print(f"Tank Level (reg 40001):   {tank_level_value}")
-    print("================================\n")
-
     # Sync with actual PLC state at startup
+    pump_status = read_coil(client, COIL_PUMP_STATUS)
     pump_on_cmd_state = bool(pump_status) if pump_status is not None else False
 
     if pump_status:
@@ -199,19 +182,9 @@ def main():
                 if tank_level is not None:
                     # Need pump?
                     if (tank_level < LOW_THRESHOLD) and (pump_on_cmd_state is False):
-                        print(f"DEBUG: About to send coil {COIL_START} = True")
-                        result = client.write_coil(COIL_START, True)
-                        print(f"DEBUG: write_coil result: {result}, isError: {result.isError() if hasattr(result, 'isError') else 'unknown'}")
-
-                        # Give PLC time to process, then check
+                        client.write_coil(COIL_START, True)
                         time.sleep(0.5)
-                        pump_check = read_coil(client, COIL_PUMP_STATUS)
-                        print(f"DEBUG: Pump status after 0.5s delay: {pump_check}")
-
-                        # Clear the start button
                         client.write_coil(COIL_START, False)
-                        print(f"DEBUG: Cleared coil {COIL_START} back to False")
-
                         pump_on_cmd_state = True
                         sim.pump_expected_running = True
                         logger.info(f"PUMP_START at {tank_level:.1f}% (sim {sim_time.time()} simLvl {sim_level:.1f}%)")
