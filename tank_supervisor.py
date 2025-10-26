@@ -187,10 +187,16 @@ def main():
                 if tank_level is not None:
                     # Need pump?
                     if (tank_level < LOW_THRESHOLD) and (pump_on_cmd_state is False):
-                        client.write_coil(COIL_START, True)
+                        print(f"DEBUG: About to send coil {COIL_START} = True")
+                        result = client.write_coil(COIL_START, True)
+                        print(f"DEBUG: write_coil result: {result}, isError: {result.isError() if hasattr(result, 'isError') else 'unknown'}")
                         pump_on_cmd_state = True
                         sim.pump_expected_running = True
                         logger.info(f"PUMP_START at {tank_level:.1f}% (sim {sim_time.time()} simLvl {sim_level:.1f}%)")
+
+                        # Immediately check if pump actually started
+                        pump_check = read_coil(client, COIL_PUMP_STATUS)
+                        print(f"DEBUG: Pump status after start command: {pump_check}")
 
                     # Stop condition near 95%
                     if (tank_level >= STOP_TARGET) and (pump_on_cmd_state is True):
