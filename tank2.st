@@ -13,19 +13,19 @@ END_VAR
    - If Tank_Full becomes TRUE, the pump must stop immediately
    - The pump cannot start if Tank_Full is TRUE *)
 
-(* Pump Control Logic *)
-IF NOT TANK_FULL THEN
-    (* Tank is not full, normal start/stop behavior *)
-    IF PB1 THEN
-        PUMP := TRUE;  (* Start pump *)
-    END_IF;
+(* Normal start logic - only start if tank not full *)
+IF PB1 AND NOT TANK_FULL THEN
+    PUMP := TRUE;
+END_IF;
 
-    IF PB2 THEN
-        PUMP := FALSE; (* Stop pump *)
-    END_IF;
-ELSE
-    (* Tank is full, stop pump and prevent starting *)
-    PUMP := FALSE;  (* Ensure pump is OFF *)
+(* Normal stop logic - should always work *)
+IF PB2 THEN
+    PUMP := FALSE;
+END_IF;
+
+(* Emergency override - tank full safety *)
+IF TANK_FULL THEN
+    PUMP := FALSE;
 END_IF;
 
 END_PROGRAM

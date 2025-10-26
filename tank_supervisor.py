@@ -35,7 +35,7 @@ REG_LEVEL        = 0        # holding reg 40001: tank level %
 
 LOW_THRESHOLD = 60.0        # start pump below this
 STOP_TARGET   = 95.0        # stop pump above this
-PULSE_SEC     = 0.2         # press button duration
+PULSE_SEC     = 1.0         # press button duration
 SCAN_SEC      = 2.0         # main loop cycle time
 
 # Simulated "day" compression:
@@ -148,7 +148,16 @@ def main():
     logger.info("SUPERVISOR_START")
 
     sim = DaySim(initial_level=95.0)
-    pump_on_cmd_state = False  # what we THINK we last requested
+
+    # Sync with actual PLC state at startup
+    pump_actual = read_coil(client, COIL_PUMP_STATUS)
+    pump_on_cmd_state = bool(pump_actual) if pump_actual is not None else False
+
+    if pump_actual:
+        logger.info(f"SYNC: Found pump already running on startup")
+        sim.pump_expected_running = True
+    else:
+        sim.pump_expected_running = False
 
     try:
         while True:
