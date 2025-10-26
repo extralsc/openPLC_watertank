@@ -1,23 +1,11 @@
-(*
-WaterTankPump.st
-OpenPLC logic for water tank pump control.
-*)
-
 PROGRAM WaterTankPump
 VAR
-    (* HMI / Modbus-facing inputs *)
-    PB_Start : BOOL AT %IX0.0;   (* Coil 801 from Modbus: momentary start *)
-    PB_Stop : BOOL AT %IX0.1;   (* Coil 802 from Modbus: momentary stop  *)
-    Tank_Full : BOOL AT %IX0.3;   (* Coil 803 / digital input: high-high safety *)
-
-    (* Process input *)
-    Tank_Level : INT AT %IW0;      (* 0..100 (%) analog/Sim level, also mapped to holding reg 40001 *)
-
-    (* Internal state *)
-    Pump_Run : BOOL;    (* Latched run request *)
-
-    (* Output *)
-    Pump_Motor : BOOL AT %QX0.0;   (* Drives the pump starter; also readable as coil 1 *)
+    PB_Start  AT %QX100.0 : BOOL;   (* Start button - Modbus coil 801 *)
+    PB_Stop   AT %QX100.1 : BOOL;   (* Stop button - Modbus coil 802 *)
+    Tank_Full AT %QX100.3 : BOOL;   (* Tank full sensor - Modbus coil 803 *)
+    Tank_Level AT %QW100 : INT;     (* Tank level - Modbus holding reg 40001 *)
+    Pump_Motor AT %QX0.0 : BOOL;    (* Pump output - Modbus coil 1 *)
+    Pump_Run : BOOL;                (* Internal latch state *)
 END_VAR
 
 (* Normal latch logic: start/stop *)
@@ -38,3 +26,10 @@ END_IF;
 Pump_Motor := Pump_Run;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+   RESOURCE Res0 ON PLC
+      TASK task0(INTERVAL := T#100ms, PRIORITY := 0);
+      PROGRAM instance0 WITH task0 : WaterTankPump;
+   END_RESOURCE
+END_CONFIGURATION
