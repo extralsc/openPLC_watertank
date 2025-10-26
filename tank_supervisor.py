@@ -27,10 +27,10 @@ from pymodbus.client import ModbusTcpClient
 PLC_IP   = "193.10.236.xx"  # <-- set to your PLC IP
 PLC_PORT = 502              # Modbus/TCP default
 
-COIL_PUMP_STATUS = 1        # coil 1  : Pump_Motor output (read-only for us)
-COIL_START       = 801      # coil 801: Start PB
-COIL_STOP        = 802      # coil 802: Stop PB
-COIL_FULL        = 803      # coil 803: Tank_Full sensor (1 = high-high)
+COIL_PUMP_STATUS = 0        # coil 1 in mbpoll = coil 0 in pymodbus
+COIL_START       = 800      # coil 801 in mbpoll = coil 800 in pymodbus
+COIL_STOP        = 801      # coil 802 in mbpoll = coil 801 in pymodbus
+COIL_FULL        = 802      # coil 803 in mbpoll = coil 802 in pymodbus
 REG_LEVEL        = 0        # holding reg 40001: tank level %
 
 LOW_THRESHOLD = 60.0        # start pump below this
