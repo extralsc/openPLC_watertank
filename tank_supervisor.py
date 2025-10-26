@@ -61,9 +61,12 @@ logger.setLevel(logging.INFO)
 # -----------------------------
 
 def pulse_coil(client, addr):
-    client.write_coil(addr, True)
+    print(f"DEBUG: Sending pulse to coil {addr}")
+    result1 = client.write_coil(addr, True)
+    print(f"DEBUG: Set coil {addr} = 1, success: {not result1.isError()}")
     time.sleep(PULSE_SEC)
-    client.write_coil(addr, False)
+    result2 = client.write_coil(addr, False)
+    print(f"DEBUG: Set coil {addr} = 0, success: {not result2.isError()}")
 
 def read_level(client):
     rr = client.read_holding_registers(REG_LEVEL, 1)
@@ -147,7 +150,7 @@ def main():
 
     logger.info("SUPERVISOR_START")
 
-    sim = DaySim(initial_level=95.0)
+    sim = DaySim(initial_level=20.0)
 
     # Sync with actual PLC state at startup
     pump_actual = read_coil(client, COIL_PUMP_STATUS)
@@ -184,14 +187,14 @@ def main():
                 if tank_level is not None:
                     # Need pump?
                     if (tank_level < LOW_THRESHOLD) and (pump_on_cmd_state is False):
-                        pulse_coil(client, COIL_START)
+                        client.write_coil(COIL_START, True)
                         pump_on_cmd_state = True
                         sim.pump_expected_running = True
                         logger.info(f"PUMP_START at {tank_level:.1f}% (sim {sim_time.time()} simLvl {sim_level:.1f}%)")
 
                     # Stop condition near 95%
                     if (tank_level >= STOP_TARGET) and (pump_on_cmd_state is True):
-                        pulse_coil(client, COIL_STOP)
+                        client.write_coil(COIL_STOP, True)
                         pump_on_cmd_state = False
                         sim.pump_expected_running = False
                         logger.info(f"PUMP_STOP at {tank_level:.1f}% (sim {sim_time.time()} simLvl {sim_level:.1f}%)")
