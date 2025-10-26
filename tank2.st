@@ -5,7 +5,6 @@ VAR
     PUMP     AT %QX0.0   : BOOL;   (* Pump output   - Modbus coil 1   *)
     TANK_FULL AT %QX100.2 : BOOL;  (* Tank Full Status - Modbus coil 803 *)
     Tank_Level AT %QW0 : INT;      (* Tank level 0-100% - Modbus holding reg 40001 *)
-    Pump_Run : BOOL;                (* Internal latch state *)
 END_VAR
 
 (* Start/Stop latch with Tank Full condition:
@@ -14,22 +13,20 @@ END_VAR
    - If Tank_Full becomes TRUE, the pump must stop immediately
    - The pump cannot start if Tank_Full is TRUE *)
 
-(* Normal latch logic: start/stop *)
-IF PB1 AND NOT TANK_FULL THEN
-    Pump_Run := TRUE;
-END_IF;
+(* Pump Control Logic *)
+IF NOT TANK_FULL THEN
+    (* Tank is not full, normal start/stop behavior *)
+    IF PB1 THEN
+        PUMP := TRUE;  (* Start pump *)
+    END_IF;
 
-IF PB2 THEN
-    Pump_Run := FALSE;
+    IF PB2 THEN
+        PUMP := FALSE; (* Stop pump *)
+    END_IF;
+ELSE
+    (* Tank is full, stop pump and prevent starting *)
+    PUMP := FALSE;  (* Ensure pump is OFF *)
 END_IF;
-
-(* Emergency override *)
-IF TANK_FULL THEN
-    Pump_Run := FALSE;
-END_IF;
-
-(* Drive motor output *)
-PUMP := Pump_Run;
 
 END_PROGRAM
 
