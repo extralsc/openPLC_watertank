@@ -74,8 +74,11 @@ def write_level(client, level_pct):
 def read_coil(client, addr):
     rr = client.read_coils(addr, 1)
     if rr.isError():
+        print(f"DEBUG: Error reading coil {addr}: {rr}")
         return None
-    return bool(rr.bits[0])
+    result = bool(rr.bits[0])
+    print(f"DEBUG: Read coil {addr} = {result} (raw bits: {rr.bits})")
+    return result
 
 # -----------------------------
 # Day simulator for drain profile
