@@ -196,7 +196,11 @@ def main():
 
                         # Immediately check if pump actually started
                         pump_check = read_coil(client, COIL_PUMP_STATUS)
+                        tank_full_check = read_coil(client, COIL_FULL)
+                        pb1_check = read_coil(client, COIL_START)
                         print(f"DEBUG: Pump status after start command: {pump_check}")
+                        print(f"DEBUG: TANK_FULL status: {tank_full_check}")
+                        print(f"DEBUG: PB1 (coil 801) status: {pb1_check}")
 
                     # Stop condition near 95%
                     if (tank_level >= STOP_TARGET) and (pump_on_cmd_state is True):
