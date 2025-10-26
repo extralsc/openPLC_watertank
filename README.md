@@ -153,6 +153,60 @@ The pump should restart automatically when the level drops below 60% again.
 **Control thresholds:**
 - Start pump: level < 60%
 - Stop pump: level ≥ 95%
+
+---
+
+## 📋 Logging System
+
+The supervisor uses Python's `RotatingFileHandler` to maintain clean, manageable logs:
+
+**Log rotation behavior:**
+- **Primary log:** `tank_events.log` (current events)
+- **Max file size:** 2 GiB per file
+- **Backup count:** 3 rotated files
+- **Total storage:** Up to 4 log files (~8 GiB max)
+
+When `tank_events.log` reaches 2 GiB:
+1. `tank_events.log` → `tank_events.log.1`
+2. `tank_events.log.1` → `tank_events.log.2`
+3. `tank_events.log.2` → `tank_events.log.3`
+4. `tank_events.log.3` is deleted
+5. Fresh `tank_events.log` created
+
+**What gets logged:**
+- ✅ Pump starts/stops with timestamp and level
+- ✅ Safety trips (Tank_Full emergency stop)
+- ✅ Supervisor lifecycle events (start/stop)
+- ❌ No routine polling data (keeps logs readable)
+
+**View logs:**
+```bash
+# Latest events
+tail -f tank_events.log
+
+# All pump activity
+grep "PUMP_" tank_events.log
+
+# Safety events only
+grep "SAFETY" tank_events.log
+```
+
+**Analyze logs:**
+
+The `summarize_log.py` script reads `tank_events.log` and generates a summary report:
+
+```bash
+python3 summarize_log.py
+```
+
+**Output includes:**
+- Total pump starts and stops with timestamps
+- Safety trip events (if any)
+- Total pump active time
+- Behavioral assessment ("Did the pump behave as expected?")
+
+This is the primary tool for verifying system operation and generating evidence reports.
+
 ---
 
 
