@@ -16,8 +16,8 @@ VAR
     (* Internal state *)
     Pump_Run      : BOOL := FALSE;    (* Latched run request *)
 
-    (* Output *)
-    Pump_Motor    AT %QX0.0 : BOOL;   (* Drives the pump starter; also readable as coil 1 *)
+    (* Output - without location mapping *)
+    Pump_Motor    : BOOL := FALSE;   (* Drives the pump starter; map to %QX0.0 in OpenPLC *)
 END_VAR
 
 (* Normal latch logic: start/stop *)
